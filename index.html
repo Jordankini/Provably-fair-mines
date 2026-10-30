@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mines Provably Fair Pro</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --card: #1a1d27;
+      --border: #2a2e3a;
+      --accent: #00e676;
+      --accent-dim: #00c853;
+      --danger: #ff3d71;
+      --text: #e8eaed;
+      --muted: #8b92a5;
+      --star: #6b7280;
+      --highlight: #00e676;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px;
+      background-image: 
+        radial-gradient(ellipse at 20% 20%, rgba(0, 230, 118, 0.05) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 80%, rgba(0, 200, 83, 0.03) 0%, transparent 50%);
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .header h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #00e676, #00c853);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 6px;
+    }
+
+    .header p {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .container {
+      display: flex;
+      gap: 32px;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 980px;
+      width: 100%;
+    }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      width: 100%;
+      max-width: 380px;
+    }
+
+    .panel h2 {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 18px;
+      font-weight: 600;
+    }
+
+    .field {
+      margin-bottom: 16px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+
+    .field input, .field select {
+      width: 100%;
+      background: #12151d;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      color: var(--text);
+      font-size: 0.95rem;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      transition: border-color 0.2s;
+    }
+
+    .field input:focus, .field select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .row {
+      display: flex;
+      gap: 12px;
+    }
+
+    .row .field {
+      flex: 1;
+    }
+
+    button.primary {
+      width: 100%;
+      background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+      color: #000;
+      border: none;
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      margin-top: 8px;
+    }
+
+    button.primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(0, 230, 118, 0.3);
+    }
+
+    button.primary:active {
+      transform: translateY(0);
+    }
+
+    .grid-panel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      background: #12151d;
+      padding: 16px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+    }
+
+    .cell {
+      width: 58px;
+      height: 58px;
+      background: #1e2230;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6rem;
+      border: 2px solid transparent;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .cell.safe {
+      color: var(--star);
+    }
+
+    .cell.mine {
+      background: #2a1520;
+      border-color: var(--danger);
+      animation: pulse-mine 1.5s infinite;
+    }
+
+    .cell.highlight {
+      border-color: var(--highlight);
+      box-shadow: 0 0 12px rgba(0, 230, 118, 0.4);
+    }
+
+    @keyframes pulse-mine {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(255, 61, 113, 0.4); }
+      50% { box-shadow: 0 0 12px 2px rgba(255, 61, 113, 0.3); }
+    }
+
+    .result-info {
+      margin-top: 20px;
+      text-align: center;
+      width: 100%;
+    }
+
+    .result-info .badge {
+      display: inline-block;
+      background: rgba(0, 230, 118, 0.1);
+      color: var(--accent);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    .positions {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      color: var(--muted);
+      word-break: break-all;
+    }
+
+    .positions strong {
+      color: var(--danger);
+    }
+
+    .verify-box {
+      margin-top: 20px;
+      background: #12151d;
+      border-radius: 12px;
+      padding: 16px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .verify-box code {
+      color: var(--accent);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+    }
+
+    .footer {
+      margin-top: 40px;
+      color: var(--muted);
+      font-size: 0.75rem;
+      text-align: center;
+    }
+
+    @media (max-width: 640px) {
+      .cell {
+        width: 48px;
+        height: 48px;
+        font-size: 1.3rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Mines Provably Fair Pro</h1>
+    <p>Calculadora 100% transparente • Algoritmo Stake HMAC-SHA256</p>
+  </div>
+
+  <div class="container">
+    <!-- Inputs -->
+    <div class="panel">
+      <h2>Parâmetros</h2>
+
+      <div class="field">
+        <label>Client Seed</label>
+        <input type="text" id="clientSeed" value="QrvOyoUHCRmp1MKNAY9N" spellcheck="false" />
+      </div>
+
+      <div class="field">
+        <label>Server Seed (hex)</label>
+        <input type="text" id="serverSeed" value="4d42252dcde44a9b56f1cebe296f305efdfa1cdc677364adc2727bcfab5cd733" spellcheck="false" />
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>Nonce</label>
+          <input type="number" id="nonce" value="1" min="0" />
+        </div>
+        <div class="field">
+          <label>Minas</label>
+          <input type="number" id="mineCount" value="1" min="1" max="24" />
+        </div>
+      </div>
+
+      <button class="primary" onclick="calculate()">Calcular Posições</button>
+
+      <div class="verify-box">
+        <strong style="color:var(--text)">Como funciona:</strong><br>
+        1. Server Seed (hex) → Buffer<br>
+        2. HMAC-SHA256(key=serverSeed, msg=<code>client:nonce:round</code>)<br>
+        3. 4 bytes → float [0,1)<br>
+        4. Fisher-Yates shuffle → posições das minas
+      </div>
+    </div>
+
+    <!-- Grid -->
+    <div class="panel grid-panel">
+      <h2>Tabuleiro 5×5</h2>
+      <div class="grid" id="grid"></div>
+
+      <div class="result-info">
+        <div class="badge" id="statusBadge">Pronto</div>
+        <div class="positions" id="positionsText">Insira as chaves e clique em Calcular</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Algoritmo idêntico ao Stake.com • Verificável localmente • Sem servidor
+  </div>
+
+  <script>
+    // ========== CRYPTO (Web Crypto API) ==========
+    async function hmacSha256(keyBuffer, message) {
+      const cryptoKey = await crypto.subtle.importKey(
+        'raw',
+        keyBuffer,
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['sign']
+      );
+      const sig = await crypto.subtle.sign('HMAC', cryptoKey, new TextEncoder().encode(message));
+      return new Uint8Array(sig);
+    }
+
+    function bytesToFloat(bytes) {
+      // Stake style: byte0/256 + byte1/256² + byte2/256³ + byte3/256⁴
+      let result = 0;
+      for (let i = 0; i < 4; i++) {
+        result += bytes[i] / Math.pow(256, i + 1);
+      }
+      return result;
+    }
+
+    async function generateFloats(serverSeedHex, clientSeed, nonce, cursor, count) {
+      const serverSeed = hexToBuffer(serverSeedHex);
+      let currentRound = Math.floor(cursor / 32);
+      let currentRoundCursor = cursor % 32;
+      const allBytes = [];
+
+      while (allBytes.length < count * 4) {
+        const msg = `${clientSeed}:${nonce}:${currentRound}`;
+        const buffer = await hmacSha256(serverSeed, msg);
+
+        while (currentRoundCursor < 32 && allBytes.length < count * 4) {
+          allBytes.push(buffer[currentRoundCursor]);
+          currentRoundCursor++;
+        }
+        if (currentRoundCursor >= 32) {
+          currentRoundCursor = 0;
+          currentRound++;
+        }
+      }
+
+      const floats = [];
+      for (let i = 0; i < count; i++) {
+        const chunk = allBytes.slice(i * 4, i * 4 + 4);
+        floats.push(bytesToFloat(chunk));
+      }
+      return floats;
+    }
+
+    function hexToBuffer(hex) {
+      const clean = hex.replace(/^0x/, '').toLowerCase();
+      if (clean.length % 2 !== 0) throw new Error('Server seed hex inválido');
+      const bytes = new Uint8Array(clean.length / 2);
+      for (let i = 0; i < clean.length; i += 2) {
+        bytes[i / 2] = parseInt(clean.substr(i, 2), 16);
+      }
+      return bytes;
+    }
+
+    // Fisher-Yates (Stake style - partial for mines)
+    async function getMinePositions(serverSeedHex, clientSeed, nonce, mineCount) {
+      const floats = await generateFloats(serverSeedHex, clientSeed, nonce, 0, 24);
+      const tiles = Array.from({ length: 25 }, (_, i) => i);
+
+      for (let i = 0; i < mineCount; i++) {
+        const remaining = 25 - i;
+        const idx = Math.floor(floats[i] * remaining);
+        // swap i with i+idx
+        const temp = tiles[i];
+        tiles[i] = tiles[i + idx];
+        tiles[i + idx] = temp;
+      }
+
+      return tiles.slice(0, mineCount).sort((a, b) => a - b);
+    }
+
+    // ========== UI ==========
+    function renderGrid(mines = [], highlight = null) {
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '';
+
+      for (let i = 0; i < 25; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+
+        if (mines.includes(i)) {
+          cell.classList.add('mine');
+          cell.innerHTML = '💣';
+        } else {
+          cell.classList.add('safe');
+          cell.innerHTML = '☆';
+        }
+
+        if (highlight !== null && i === highlight) {
+          cell.classList.add('highlight');
+        }
+
+        grid.appendChild(cell);
+      }
+    }
+
+    async function calculate() {
+      const clientSeed = document.getElementById('clientSeed').value.trim();
+      const serverSeed = document.getElementById('serverSeed').value.trim();
+      const nonce = parseInt(document.getElementById('nonce').value) || 0;
+      const mineCount = Math.min(24, Math.max(1, parseInt(document.getElementById('mineCount').value) || 1));
+
+      const badge = document.getElementById('statusBadge');
+      const posText = document.getElementById('positionsText');
+
+      badge.textContent = 'Calculando...';
+      badge.style.background = 'rgba(255,193,7,0.15)';
+      badge.style.color = '#ffc107';
+
+      try {
+        const mines = await getMinePositions(serverSeed, clientSeed, nonce, mineCount);
+        renderGrid(mines);
+
+        badge.textContent = `✓ ${mineCount} mina${mineCount > 1 ? 's' : ''} encontrada${mineCount > 1 ? 's' : ''}`;
+        badge.style.background = 'rgba(0,230,118,0.12)';
+        badge.style.color = 'var(--accent)';
+
+        const positionsStr = mines.map(p => {
+          const row = Math.floor(p / 5) + 1;
+          const col = (p % 5) + 1;
+          return `${p} (L${row}C${col})`;
+        }).join(', ');
+
+        posText.innerHTML = `<strong>Posições:</strong> ${positionsStr}`;
+      } catch (err) {
+        badge.textContent = 'Erro';
+        badge.style.background = 'rgba(255,61,113,0.15)';
+        badge.style.color = 'var(--danger)';
+        posText.textContent = err.message;
+        renderGrid([]);
+      }
+    }
+
+    // Inicial
+    renderGrid();
+    // Auto-calc com os valores de exemplo
+    setTimeout(calculate, 300);
+  </script>
+</body>
+</html>
